@@ -1,5 +1,6 @@
 ahff2png:
-	${CC} ${CFLAGS} -o ahff2png ahff2png.c lodepng.c -lz
+	${CXX} ${CXXFLAGS} -c rg_etc1.cpp rg_etc1wrap.cpp
+	${CC} ${CFLAGS} -o ahff2png ahff2png.c lodepng.c rg_etc1.o rg_etc1wrap.o -lz
 
 lz4er:
 	make -C ./lz4/lib

@@ -3,6 +3,7 @@
  * Copyright (c) 2015 The Holy Constituency of the Summer Triangle.
  * All rights reserved.
  */
+#include "rg_etc1wrap.h"
 
 void copy_1bpp_luma(byte *raw, int len, byte *output) {
     memset(output, 255, len * 4);
@@ -82,5 +83,32 @@ void copy_3bpp_rgb(byte *raw, int len, byte *output) {
         output[ctr] = raw[i];
         output[ctr + 1] = raw[i + 1];
         output[ctr + 2] = raw[i + 2];
+    }
+}
+
+void copy_etc1_rgb(byte *raw, int len, byte *output, int width) {
+    byte dst[4 * 4 * 4];
+    byte *row1 = output,
+         *row2 = row1 + (width * 4),
+         *row3 = row2 + (width * 4),
+         *row4 = row3 + (width * 4);
+    int offset = 0;
+    for (int i = 0; i < len; i += 8) {
+        assert(unpack_etc1_block_c(raw + i, dst, 0) == 1);
+        
+        memcpy(row1 + offset, dst     , 4 * 4);
+        memcpy(row2 + offset, dst + 16, 4 * 4);
+        memcpy(row3 + offset, dst + 32, 4 * 4);
+        memcpy(row4 + offset, dst + 48, 4 * 4);
+
+        offset += 16;
+
+        if (offset >= width * 4) {
+            row1 = row4 + (width * 4);
+            row2 = row1 + (width * 4);
+            row3 = row2 + (width * 4);
+            row4 = row3 + (width * 4);
+            offset = 0;
+        }
     }
 }

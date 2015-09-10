@@ -37,6 +37,7 @@ enum /* pixel_format_t */ {
     RGBA32 = 4,
     RGB565 = 7,
     RGBA4444 = 13,
+    ETC1RGB = 34,
 };
 
 #define READ_FULLY(fd, buf, size) do { \
@@ -119,6 +120,9 @@ int main (int argc, char const *argv[]) {
             break;
         case RGBA32:
             memcpy(out, buf, info.s.datsize);
+            break;
+        case ETC1RGB:
+            copy_etc1_rgb(buf, info.s.datsize, out, info.s.width);
             break;
         default:
             fprintf(stderr, "unknown pixel format %d\n", info.s.pixel_format);
