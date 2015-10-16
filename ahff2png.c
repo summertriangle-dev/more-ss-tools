@@ -12,6 +12,15 @@
 
 #include "lodepng.h"
 
+#define EXPECT_SIZE_CHK_AND_WARN() do { \
+    if (info.s.datsize != expect_size) \
+        printf("warning: image data is larger than expected " \
+               "(%u as opposed to %u).\n" \
+               "(if you want to see what lies beyond, tweak the " \
+               "file's image size in a hex editor. consult the definition " \
+               "of ahff_header_t for more information.)\n", info.s.datsize, expect_size); \
+} while (0)
+
 typedef union {
     unsigned char b[4];
     uint32_t n;
@@ -105,23 +114,38 @@ int main (int argc, char const *argv[]) {
     }
     printf("[>] %s\n", fn);
     
+    uint32_t point_count = info.s.width * info.s.height;
+    uint32_t expect_size = 0;
+    
     switch (info.s.pixel_format) {
         case A8:
-            copy_1bpp_alpha(buf, info.s.datsize, out);
+            expect_size = point_count;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_1bpp_alpha(buf, expect_size, out);
             break;
         case RGB24:
-            copy_3bpp_rgb(buf, info.s.datsize, out);
+            expect_size = point_count * 3;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_3bpp_rgb(buf, expect_size, out);
             break;
         case RGB565:
-            copy_2bpp_rgb565(buf, info.s.datsize, out);
+            expect_size = point_count * 2;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_2bpp_rgb565(buf, expect_size, out);
             break;
         case RGBA4444:
-            copy_2bpp_rgba4444(buf, info.s.datsize, out);
+            expect_size = point_count * 2;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_2bpp_rgba4444(buf, expect_size, out);
             break;
         case RGBA32:
-            memcpy(out, buf, info.s.datsize);
+            expect_size = point_count * 4;
+            EXPECT_SIZE_CHK_AND_WARN();
+            memcpy(out, buf, expect_size);
             break;
         case ETC1RGB:
+            // to do: figure out an expected size for etc1.
+            // should be pretty easy.
             copy_etc1_rgb(buf, info.s.datsize, out, info.s.width);
             break;
         default:
