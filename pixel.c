@@ -94,7 +94,8 @@ void copy_etc1_rgb(byte *raw, int len, byte *output, int width) {
          *row4 = row3 + (width * 4);
     int offset = 0;
     for (int i = 0; i < len; i += 8) {
-        assert(unpack_etc1_block_c(raw + i, dst, 0) == 1);
+        int ok = unpack_etc1_block_c(raw + i, dst, 0);
+        assert(ok == 1);
         
         memcpy(row1 + offset, dst     , 4 * 4);
         memcpy(row2 + offset, dst + 16, 4 * 4);
