@@ -144,9 +144,13 @@ int main (int argc, char const *argv[]) {
             memcpy(out, buf, expect_size);
             break;
         case ETC1RGB:
-            // to do: figure out an expected size for etc1.
-            // should be pretty easy.
-            copy_etc1_rgb(buf, info.s.datsize, out, info.s.width);
+            /* ETC1 encodes 4x4 blocks.
+             * So w and h must be multiples of 4. */
+            assert(info.s.width % 4 == 0);
+            assert(info.s.height % 4 == 0);
+            expect_size = point_count / 2;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_etc1_rgb(buf, expect_size, out, info.s.width);
             break;
         default:
             fprintf(stderr, "unknown pixel format %d\n", info.s.pixel_format);
