@@ -4,6 +4,7 @@
  * All rights reserved.
  */
 #include "rg_etc1wrap.h"
+#include "pvrtc_wraps.h"
 
 void copy_1bpp_luma(byte *raw, int len, byte *output) {
     memset(output, 255, len * 4);
@@ -79,14 +80,26 @@ void copy_2bpp_rgba4444(byte *raw, int len, byte *output) {
 
 void copy_3bpp_rgb(byte *raw, int len, byte *output) {
     memset(output, 255, len + (len / 3));
-    for (int i = 0, ctr = 0; i < len; ctr = (i += 3) * 4) {
-        output[ctr] = raw[i];
-        output[ctr + 1] = raw[i + 1];
-        output[ctr + 2] = raw[i + 2];
+    for (int i = 0, o = 0; i < len;) {
+        output[o++] = raw[i++];
+        output[o++] = raw[i++];
+        output[o++] = raw[i++];
+        o++;
     }
 }
 
-void copy_etc1_rgb(byte *raw, int len, byte *output, int width) {
+void copy_4bpp_argb(byte *raw, int len, byte *output) {
+    for (int i = 0, o = 0; i < len; i += 4) {
+        output[o++] = raw[i + 1];
+        output[o++] = raw[i + 2];
+        output[o++] = raw[i + 3];
+        output[o++] = raw[i];
+    }
+}
+
+void copy_etc1_rgb(byte *raw, byte *output, int width, int height) {
+    int len = (width * height) / 2;
+
     byte dst[4 * 4 * 4];
     byte *row1 = output,
          *row2 = row1 + (width * 4),
@@ -96,7 +109,7 @@ void copy_etc1_rgb(byte *raw, int len, byte *output, int width) {
     for (int i = 0; i < len; i += 8) {
         int ok = unpack_etc1_block_c(raw + i, dst, 0);
         assert(ok == 1);
-        
+
         memcpy(row1 + offset, dst     , 4 * 4);
         memcpy(row2 + offset, dst + 16, 4 * 4);
         memcpy(row3 + offset, dst + 32, 4 * 4);

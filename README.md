@@ -4,3 +4,5 @@ Make sure to clone https://github.com/Cyan4973/lz4 before making lz4er or it wil
 
 ahff2png uses LodePNG and rg_etc1, both follow the zlib license.
 The full license text is inside their source files.
+
+This product includes components of the PowerVR™ SDK from Imagination Technologies Limited.

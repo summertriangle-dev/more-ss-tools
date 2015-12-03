@@ -27,7 +27,7 @@ typedef union {
 } byte_addressable_uint32;
 typedef unsigned char byte;
 
-// the Ad-Hoc File Format is intentionally very simple so i don't have 
+// the Ad-Hoc File Format is intentionally very simple so i don't have
 // to write so much java
 // packed should have no effect, this is just for safety reasons
 typedef union {
@@ -44,8 +44,11 @@ enum /* pixel_format_t */ {
     A8 = 1,
     RGB24 = 3,
     RGBA32 = 4,
+    ARGB32 = 5,
     RGB565 = 7,
     RGBA4444 = 13,
+    PVRTC_RGB4 = 32,
+    PVRTC_RGBA4 = 33,
     ETC1RGB = 34,
 };
 
@@ -56,51 +59,51 @@ enum /* pixel_format_t */ {
 } while(0)
 
 #include "pixel.c"
-    
+
 void flip_image_sideways(byte *buf, uint32_t width, uint32_t height) {
     byte *work = malloc(width * 4);
     byte *worp = work;
-    
+
     for (int row = 0; row < height; ++row) {
         byte *crow = buf + (row * width * 4);
         worp = work;
-        
+
         for (size_t i = (width - 1) * 4; i > 0; i -= 4) {
             memcpy(worp, crow + i, 4);
             worp += 4;
         }
-        
+
         memcpy(crow, work, width * 4);
     }
-    
+
     free(work);
 }
 
 void flip_image_upside_down(byte *buf, uint32_t width, uint32_t height) {
     byte *work = malloc(width * 4);
-    
+
     for (int row = 0, target_row = height - 1; row < (height / 2); ++row, --target_row) {
         memcpy(work, buf + (target_row * width * 4), width * 4);
         memcpy(buf + (target_row * width * 4), buf + (row * width * 4), width * 4);
         memcpy(buf + (row * width * 4), work, width * 4);
     }
-    
+
     free(work);
 }
 
 int main (int argc, char const *argv[]) {
     int fd = open(argv[1], O_RDONLY);
     assert(fd >= 0);
-    
+
     ahff_header_t info = { 0 };
     READ_FULLY(fd, info.b, sizeof(ahff_header_t));
-    
+
     unsigned char *buf = malloc(info.s.datsize);
     unsigned char *out = calloc(info.s.width * info.s.height, 4);
     assert(buf && out);
-    
+
     READ_FULLY(fd, buf, info.s.datsize);
-    
+
     int len = strlen(argv[1]);
     char *cp = strdup(argv[1]);
     char *fn;
@@ -112,11 +115,11 @@ int main (int argc, char const *argv[]) {
         snprintf(fn, len + 5, "%s.png", cp);
         free(cp);
     }
-    printf("[>] %s\n", fn);
-    
+    printf("[>] %s (%d): ", fn, info.s.pixel_format);
+
     uint32_t point_count = info.s.width * info.s.height;
     uint32_t expect_size = 0;
-    
+
     switch (info.s.pixel_format) {
         case A8:
             expect_size = point_count;
@@ -143,6 +146,18 @@ int main (int argc, char const *argv[]) {
             EXPECT_SIZE_CHK_AND_WARN();
             memcpy(out, buf, expect_size);
             break;
+        case ARGB32:
+            expect_size = point_count * 4;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_4bpp_argb(buf, expect_size, out);
+            break;
+        case PVRTC_RGB4:
+        case PVRTC_RGBA4:
+            expect_size = point_count / 2;
+            EXPECT_SIZE_CHK_AND_WARN();
+            copy_pvrtc4_rgba(buf, out, info.s.width, info.s.height);
+            //copy_pvrtc_rgba(buf, expect_size, out, info.s.width, info.s.height);
+            break;
         case ETC1RGB:
             /* ETC1 encodes 4x4 blocks.
              * So w and h must be multiples of 4. */
@@ -150,16 +165,18 @@ int main (int argc, char const *argv[]) {
             assert(info.s.height % 4 == 0);
             expect_size = point_count / 2;
             EXPECT_SIZE_CHK_AND_WARN();
-            copy_etc1_rgb(buf, expect_size, out, info.s.width);
+            copy_etc1_rgb(buf, out, info.s.width, info.s.height);
+            //copy_etc1_rgb(buf, expect_size, out, info.s.width);
             break;
         default:
             fprintf(stderr, "unknown pixel format %d\n", info.s.pixel_format);
             goto end;
     }
-    
+
     // flip_image_sideways(out, info.width, info.height);
     flip_image_upside_down(out, info.s.width, info.s.height);
-    lodepng_encode32_file(fn, out, info.s.width, info.s.height);
+    int ret = lodepng_encode32_file(fn, out, info.s.width, info.s.height);
+    printf("%d\n", ret);
 
   end:
     free(fn);
